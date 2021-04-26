@@ -15,7 +15,8 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: root
   password: password
-  host: db
+  ## 環境変数があればその環境変数を採用し、なければdocker-composeのdbを採用する
+  host: <%= ENV.fetch("APP_DATABASE_HOST") { 'db' } %>
 
 development:
   <<: *default
