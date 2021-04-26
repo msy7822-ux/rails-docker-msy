@@ -1,0 +1,62 @@
+## circleciのバージョン宣言
+version: 2.1
+## circleci上で使えるパッケージをまとめた場所がorbsで、そのorbsのrubyパッケージを使用する
+orbs:
+  ruby: circleci/ruby@1.1.2
+
+jobs:
+  ## 今回はbuild(docker image)とtestのjobを定義
+  build:
+    docker:
+      ## ここでは簡単にいえばbundle installをしているだけ
+      ## buildを動かす際に使用するimageを指定（circleci/ruby:2.7というimageがある）
+      - image: circleci/ruby:2.7
+    ## GitHubのリポジトリ名と同じにする必要がある
+    working_directory: ~/rails-docker-msy/src
+    ## 実際のjobの中身を記載する
+    steps:
+      ## rails-docker-msyディレクトリに、GitHubリポジトリのデータをコピーする(checkoutする)
+      - checkout:
+          path: ~/rails-docker-msy
+      ## bundle install等を実行してくれるコマンド(orbsのおかげでbundle installなどは下記コマンドでまとめて行ってくれる)
+      - ruby/install-deps
+
+  test:
+    ## circleciの実行環境
+    docker:
+      - image: circleci/ruby:2.7
+      - image: circleci/mysql:5.5
+        ## mysqlの環境変数(test環境)
+        environment:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: app_test
+          MySQL_USER: root
+    ## test jobの環境変数
+    environment:
+      BUNDLE_JOBS: "3"
+      BUNDLE_RETRY: "3"
+      APP_DATABASE_HOST: "127.0.0.1"
+      RAILS_ENV: test
+    working_directory: ~/rails-docker-msy/src
+    steps:
+      - checkout:
+          path: ~/rails-docker-msy
+      - ruby/install-deps
+      ## testを実行する前にdatabaseのセットアップが必要
+      - run:
+          name: Database setup
+          command: bundle exec rails db:migrate
+      - run:
+          name: test
+          command: bundle exec rails test
+
+## build_and_testという名前のワークフローを作成
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
+      - test:
+          ## testを行うにはbuildが完了している必要がある
+          requires:
+            - build
