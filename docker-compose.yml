@@ -1,0 +1,24 @@
+version: '3'
+services:
+  db:
+    image: mysql:8.0
+    ## mysql8.0の認証コマンド（無いとエラーになる）
+    command: --default-authentication-plugin=mysql_native_password
+    ## このようにdockerとローカルを同期させておかないと、DBコンテナが削除されるたびにデータがなくなるのでデータ自体はローカルでも保持しておく
+    volumes:
+      - ./src/db/mysql_data:/var/lib/mysql
+    ## 環境変数の設定
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+  web:
+    ## WEBではカレントディレクトリのDockerfileを参照するようになる
+    build: .
+    ## -b '0.0.0.0'では、IPアドレスのバインド先がどこでも良いこと示している
+    command: bundle exec rails s -p 3000 -b '0.0.0.0'
+    volumes:
+      - ./src:/app
+    ports:
+      - "3000:3000"
+    ## 依存関係(IPアドレスの接続先の決定)
+    depends_on:
+      - db
